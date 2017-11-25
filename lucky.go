@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/pkg/browser"
 	"golang.org/x/net/html"
 	"net/http"
-	"strings"
 )
 
 func main() {
@@ -28,6 +30,9 @@ func main() {
 			// End of html, done
 			return
 
+		case results == max_results:
+			return
+
 		case tagtok == html.StartTagToken:
 			tok := tokenizer.Token()
 
@@ -38,18 +43,16 @@ func main() {
 					if attr.Key == "href" {
 
 						if strings.Contains(attr.Val, url_prefix) {
-							fmt.Println(strings.Replace(attr.Val, url_prefix, "", 1))
-							fmt.Println("")
 							results += 1
+							url := strings.Replace(attr.Val, url_prefix, "", 1)
+							fmt.Printf("%d) %s\n", results, url)
+							browser.OpenURL(url)
 						}
 
 						break
 					}
 				}
 			}
-
-		case results == max_results:
-			return
 		}
 	}
 }
