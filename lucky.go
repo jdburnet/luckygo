@@ -13,8 +13,8 @@ func main() {
 	const google = "https://google.com"
 	const search = google + "/search?q="
 	const tmp = "funny+cat"
-	const url_prefix = "/url?q="
-	const max_results = 5
+	const urlPrefix = "/url?q="
+	const maxResults = 5
 
 	response, _ := http.Get(search + tmp)
 	tokenizer := html.NewTokenizer(response.Body)
@@ -30,7 +30,7 @@ func main() {
 			// End of html, done
 			return
 
-		case results == max_results:
+		case results == maxResults:
 			return
 
 		case tagtok == html.StartTagToken:
@@ -42,9 +42,9 @@ func main() {
 				for _, attr := range tok.Attr {
 					if attr.Key == "href" {
 
-						if strings.Contains(attr.Val, url_prefix) {
+						if strings.Contains(attr.Val, urlPrefix) {
 							results += 1
-							url := strings.Replace(attr.Val, url_prefix, "", 1)
+							url := strings.Replace(attr.Val, urlPrefix, "", 1)
 							fmt.Printf("%d) %s\n", results, url)
 							browser.OpenURL(url)
 						}
