@@ -2,57 +2,83 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
+
+	"net/http"
 
 	"github.com/pkg/browser"
 	"golang.org/x/net/html"
-	"net/http"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func main() {
-	const google = "https://google.com"
-	const search = google + "/search?q="
-	const tmp = "funny+cat"
+	app := cli.NewApp()
+	app.Name = "luckygo"
+	app.Usage = "Open the top search results of any google search"
+
+	const searchEngine = "https://google.com"
 	const urlPrefix = "/url?q="
-	const maxResults = 5
+	searchPrefix := searchEngine + "/search?q="
 
-	response, _ := http.Get(search + tmp)
-	tokenizer := html.NewTokenizer(response.Body)
+	var limit int
+	app.Flags = []cli.Flag{
+		cli.IntFlag{
+			Name:        "limit",
+			Value:       5,
+			Usage:       "number of search results to open",
+			Destination: &limit,
+		},
+	}
 
-	results := 0
+	app.Action = func(c *cli.Context) error {
 
-	for {
-		tagtok := tokenizer.Next()
+		searchBody := ""
+		if c.NArg() == 0 {
+			fmt.Printf("Must specify search query as first argument")
+		}
+		searchBody = strings.Replace(c.Args()[0], " ", "+", -1)
 
-		switch {
+		response, _ := http.Get(searchPrefix + searchBody)
+		tokenizer := html.NewTokenizer(response.Body)
 
-		case tagtok == html.ErrorToken:
-			// End of html, done
-			return
+		results := 0
 
-		case results == maxResults:
-			return
+		for {
+			tagtok := tokenizer.Next()
 
-		case tagtok == html.StartTagToken:
-			tok := tokenizer.Token()
+			switch {
 
-			isAnchor := tok.Data == "a"
+			case tagtok == html.ErrorToken:
+				// End of html, done
+				return nil
 
-			if isAnchor {
-				for _, attr := range tok.Attr {
-					if attr.Key == "href" {
+			case results == limit:
+				return nil
 
-						if strings.Contains(attr.Val, urlPrefix) {
-							results += 1
-							url := strings.Replace(attr.Val, urlPrefix, "", 1)
-							fmt.Printf("%d) %s\n", results, url)
-							browser.OpenURL(url)
+			case tagtok == html.StartTagToken:
+				tok := tokenizer.Token()
+
+				isAnchor := tok.Data == "a"
+
+				if isAnchor {
+					for _, attr := range tok.Attr {
+						if attr.Key == "href" {
+
+							if strings.Contains(attr.Val, urlPrefix) {
+								results += 1
+								url := strings.Replace(attr.Val, urlPrefix, "", 1)
+								fmt.Printf("%d) %s\n", results, url)
+								browser.OpenURL(url)
+							}
+
+							break
 						}
-
-						break
 					}
 				}
 			}
 		}
 	}
+
+	app.Run(os.Args)
 }
