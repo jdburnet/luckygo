@@ -36,6 +36,7 @@ func main() {
 		searchBody := ""
 		if c.NArg() == 0 {
 			fmt.Printf("Must specify search query as first argument")
+			os.Exit(1)
 		}
 		searchBody = strings.Replace(c.Args()[0], " ", "+", -1)
 
@@ -66,10 +67,18 @@ func main() {
 						if attr.Key == "href" {
 
 							if strings.Contains(attr.Val, urlPrefix) {
-								results += 1
+								// exclude '/url?q=' from final url
 								url := strings.Replace(attr.Val, urlPrefix, "", 1)
-								fmt.Printf("%d) %s\n", results, url)
-								browser.OpenURL(url)
+								// exclude & and everything after it, unneeded for destination url
+								if endIndex := strings.Index(url, "&"); endIndex > 0 {
+									url = url[:endIndex]
+								}
+								// only use this url if it doesn't have 'google' in it
+								if !strings.Contains(url, "google") {
+									results++
+									fmt.Printf("%d) %s\n", results, url)
+									browser.OpenURL(url)
+								}
 							}
 
 							break
